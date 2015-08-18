@@ -67,6 +67,34 @@ class vagrant_notary(ShutItModule):
 		# shutit.set_password(password, user='')
 		#                                    - Set password for a given user on target
 		shutit.send('vagrant up')
+		shutit.login(command='vagrant ssh')
+		shutit.login(command='sudo su -')
+		shutit.install('git curl')
+		shutit.send('curl -sSL https://get.docker.com/ | sh')
+		shutit.send('''sh -c 'echo "127.0.0.1 notaryserver" >> /etc/hosts' ''',note='Add an entry for the notaryserver to /etc/hosts')
+		shutit.send('''sh -c 'echo "127.0.0.1 sandboxregistry" >> /etc/hosts' ''',note='Add an entry for the sandboxregistry to /etc/hosts')
+		shutit.send('mkdir notarysandbox')
+		shutit.send('cd notarysandbox')
+		shutit.send('mkdir notarytest')
+		shutit.send('cd notarytest')
+		shutit.send_file('Dockerfile','''FROM debian:jessie
+ADD https://master.dockerproject.org/linux/amd64/docker /usr/bin/docker
+RUN chmod +x /usr/bin/docker && apt-get update && apt-get install -y tree vim git ca-certificates --no-install-recommends
+WORKDIR /root
+RUN git clone -b trust-sandbox https://github.com/docker/notary.git
+RUN cp /root/notary/fixtures/root-ca.crt /usr/local/share/ca-certificates/root-ca.crt
+RUN update-ca-certificates
+ENTRYPOINT ["bash"]''',note='Create dockerfile for sandbox build')
+		shutit.send('docker build -t notarysandbox .',note='Build notarysandbox')
+		shutit.send('cd ../notarysandbox')
+		shutit.send('git clone -b trust-sandbox https://github.com/docker/notary.git')
+		shutit.send('git clone https://github.com/docker/distribution.git')
+		shutit.send('cd notary')
+		shutit.send('docker-compose build')
+		shutit.send('docker-compose up -d')
+		shutit.send('cd ../notarysandbox/distribution')
+		shutit.logout()
+		shutit.logout()
 		return True
 
 	def get_config(self, shutit):
