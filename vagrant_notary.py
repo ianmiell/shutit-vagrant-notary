@@ -66,6 +66,7 @@ class vagrant_notary(ShutItModule):
 		# shutit.package_installed(package)  - Returns True if the package exists on the target
 		# shutit.set_password(password, user='')
 		#                                    - Set password for a given user on target
+		shutit.send('vagrant destroy -f')
 		shutit.send('vagrant up')
 		shutit.login(command='vagrant ssh')
 		shutit.login(command='sudo su -')
@@ -86,13 +87,14 @@ RUN cp /root/notary/fixtures/root-ca.crt /usr/local/share/ca-certificates/root-c
 RUN update-ca-certificates
 ENTRYPOINT ["bash"]''',note='Create dockerfile for sandbox build')
 		shutit.send('docker build -t notarysandbox .',note='Build notarysandbox')
-		shutit.send('cd ../notarysandbox')
+		shutit.send('cd ../../notarysandbox')
 		shutit.send('git clone -b trust-sandbox https://github.com/docker/notary.git')
 		shutit.send('git clone https://github.com/docker/distribution.git')
 		shutit.send('cd notary')
+		TODO: docker-compose
 		shutit.send('docker-compose build')
 		shutit.send('docker-compose up -d')
-		shutit.send('cd ../notarysandbox/distribution')
+		shutit.send('cd ../../notarysandbox/distribution')
 		shutit.logout()
 		shutit.logout()
 		return True
