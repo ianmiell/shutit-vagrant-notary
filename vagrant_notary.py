@@ -73,6 +73,7 @@ class vagrant_notary(ShutItModule):
 		shutit.install('git curl')
 		shutit.send('curl -sSL https://get.docker.com/ | sh')
 		shutit.send('curl -L https://github.com/docker/compose/releases/download/1.4.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose')
+		shutit.send('chmod +x /usr/local/bin/docker-compose')
 		shutit.send('''sh -c 'echo "127.0.0.1 notaryserver" >> /etc/hosts' ''',note='Add an entry for the notaryserver to /etc/hosts')
 		shutit.send('''sh -c 'echo "127.0.0.1 sandboxregistry" >> /etc/hosts' ''',note='Add an entry for the sandboxregistry to /etc/hosts')
 		shutit.send('mkdir notarysandbox')
