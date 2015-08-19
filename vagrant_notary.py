@@ -66,7 +66,13 @@ class vagrant_notary(ShutItModule):
 		# shutit.package_installed(package)  - Returns True if the package exists on the target
 		# shutit.set_password(password, user='')
 		#                                    - Set password for a given user on target
-		shutit.send('vagrant destroy -f')
+		shutit.install('git')
+		shutit.send('cd ' + shutit.cfg[self.module_id]['vagrant_dir'])
+		if shutit.file_exists('shutit-vagrant-notary',directory=True):
+			shutit.send('cd shutit-vagrant-notary')
+		else:
+			shutit.send('git clone https://github.com/ianmiell/shutit-vagrant-notary')
+			shutit.send('cd shutit-vagrant-notary')
 		shutit.send('vagrant up')
 		shutit.login(command='vagrant ssh')
 		shutit.login(command='sudo su -')
@@ -108,6 +114,7 @@ ENTRYPOINT ["bash"]''',note='Create dockerfile for sandbox build')
 		# shutit.get_config(self.module_id, 'myconfig', default='a value')
 		#                                      and reference in your code with:
 		# shutit.cfg[self.module_id]['myconfig']
+		shutit.get_config(self.module_id, 'vagrant_dir', '/space/vagrant', hint='Location of build')
 		return True
 
 	def test(self, shutit):
