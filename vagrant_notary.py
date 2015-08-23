@@ -96,7 +96,11 @@ RUN update-ca-certificates
 ENTRYPOINT ["bash"]''',note='Create dockerfile for sandbox build')
 		shutit.send('docker build -t notarysandbox .',note='Build notarysandbox')
 		shutit.send('cd ../../notarysandbox')
+		if shutit.file_exists('notary',directory=True):
+			shutit.send('rm -rf notary')
 		shutit.send('git clone -b trust-sandbox https://github.com/docker/notary.git')
+		if shutit.file_exists('distribution',directory=True):
+			shutit.send('rm -rf distribution')
 		shutit.send('git clone https://github.com/docker/distribution.git')
 		shutit.send('cd notary')
 		shutit.send('docker-compose build')
