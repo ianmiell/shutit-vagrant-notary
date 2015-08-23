@@ -82,9 +82,9 @@ class vagrant_notary(ShutItModule):
 		shutit.send('chmod +x /usr/local/bin/docker-compose')
 		shutit.send('''sh -c 'echo "127.0.0.1 notaryserver" >> /etc/hosts' ''',note='Add an entry for the notaryserver to /etc/hosts')
 		shutit.send('''sh -c 'echo "127.0.0.1 sandboxregistry" >> /etc/hosts' ''',note='Add an entry for the sandboxregistry to /etc/hosts')
-		shutit.send('mkdir notarysandbox')
+		shutit.send('mkdir -p notarysandbox')
 		shutit.send('cd notarysandbox')
-		shutit.send('mkdir notarytest')
+		shutit.send('mkdir -p notarytest')
 		shutit.send('cd notarytest')
 		shutit.send_file('Dockerfile','''FROM debian:jessie
 ADD https://master.dockerproject.org/linux/amd64/docker /usr/bin/docker
