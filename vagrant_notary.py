@@ -65,7 +65,6 @@ class vagrant_notary(ShutItModule):
 		# shutit.package_installed(package)  - Returns True if the package exists on the target
 		# shutit.set_password(password, user='')
 		#                                    - Set password for a given user on target
-		shutit.install('git')
 		shutit.send('mkdir -p ' + shutit.cfg[self.module_id]['vagrant_dir'])
 		shutit.send('cd ' + shutit.cfg[self.module_id]['vagrant_dir'])
 		if shutit.file_exists('shutit-vagrant-notary',directory=True):
@@ -73,6 +72,7 @@ class vagrant_notary(ShutItModule):
 		else:
 			shutit.send('git clone --recursive https://github.com/ianmiell/shutit-vagrant-notary')
 			shutit.send('cd shutit-vagrant-notary')
+		shutit.send('vagrant destroy -f || /bin/true')
 		shutit.send('vagrant up')
 		shutit.login(command='vagrant ssh')
 		shutit.login(command='sudo su -')
@@ -80,8 +80,8 @@ class vagrant_notary(ShutItModule):
 		shutit.send('curl -sSL https://experimental.docker.com/ | sh')
 		shutit.send('curl -L https://github.com/docker/compose/releases/download/1.4.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose')
 		shutit.send('chmod +x /usr/local/bin/docker-compose')
-		shutit.send('''sh -c 'echo "127.0.0.1 notaryserver" >> /etc/hosts' ''',note='Add an entry for the notaryserver to /etc/hosts')
-		shutit.send('''sh -c 'echo "127.0.0.1 sandboxregistry" >> /etc/hosts' ''',note='Add an entry for the sandboxregistry to /etc/hosts')
+		shutit.send('''sh -c 'echo "127.0.0.1 notaryserver" >> /etc/hosts' ''',note='Adding an entry for the notaryserver to /etc/hosts')
+		shutit.send('''sh -c 'echo "127.0.0.1 sandboxregistry" >> /etc/hosts' ''',note='Adding an entry for the sandboxregistry to /etc/hosts')
 		shutit.send('mkdir -p notarysandbox')
 		shutit.send('cd notarysandbox')
 		shutit.send('mkdir -p notarytest')
@@ -93,23 +93,36 @@ WORKDIR /root
 RUN git clone -b trust-sandbox https://github.com/docker/notary.git
 RUN cp /root/notary/fixtures/root-ca.crt /usr/local/share/ca-certificates/root-ca.crt
 RUN update-ca-certificates
-ENTRYPOINT ["bash"]''',note='Create dockerfile for sandbox build')
-		shutit.send('docker build -t notarysandbox .',note='Build notarysandbox')
+ENTRYPOINT ["bash"]''',note='Creating dockerfile for sandbox build')
+		shutit.send('docker build -t notarysandbox .',note='Building notarysandbox')
 		shutit.send('cd ../../notarysandbox')
 		if shutit.file_exists('notary',directory=True):
 			shutit.send('rm -rf notary')
-		shutit.send('git clone -b trust-sandbox https://github.com/docker/notary.git',note='Get trust-sandbox notary code')
+		shutit.send('git clone -b trust-sandbox https://github.com/docker/notary.git',note='Getting trust-sandbox notary code')
 		if shutit.file_exists('distribution',directory=True):
 			shutit.send('rm -rf distribution')
-		shutit.send('git clone https://github.com/docker/distribution.git',note='get registry/distribution code')
+		shutit.send('git clone https://github.com/docker/distribution.git',note='Getting registry/distribution code')
 		shutit.send('cd notary')
-		shutit.send('docker-compose build',note='build notary using docker-compose')
-		shutit.send('docker-compose up -d',note='bring up notary')
+		shutit.send('docker-compose build',note='Building notary using docker-compose')
+		shutit.send('docker-compose up -d',note='Bringing up notary')
 		shutit.send('cd ../../notarysandbox/distribution')
-		shutit.send('docker build -t sandboxregistry .',note='build the registry for the sandbox')
-		shutit.send('docker run -p 5000:5000 --name sandboxregistry sandboxregistry &',note='run the sandbox registry')
-		shutit.send('docker run -it -v /var/run/docker.sock:/var/run/docker.sock --link notary_notaryserver_1:notaryserver --link sandboxregistry:sandboxregistry notarysandbox',note='')
-		shutit.pause_point('You can now try the "Test some trust operations" section of https://docs.docker.com/security/trust/trust_sandbox/')
+		shutit.send('docker build -t sandboxregistry .',note='Building the registry for the sandbox')
+		shutit.send('docker rm -f sandboxregistry || /bin/true')
+		shutit.send('docker run -d -p 5000:5000 --name sandboxregistry sandboxregistry',note='Running the sandbox registry')
+		shutit.send('docker rm -f notarysandbox || /bin/true')
+		shutit.login(command='docker run -it -v /var/run/docker.sock:/var/run/docker.sock --link notary_notaryserver_1:notaryserver --link sandboxregistry:sandboxregistry notarysandbox',note='Logging into the notary sandbox, linked to the notary server')
+		shutit.send('docker pull alpine',note='Pulling an image to sign')
+		shutit.send('docker tag -f alpine sandboxregistry:5000/test/alpine:latest',note='Tagging the image ready to push and sign')
+		shutit.send('export DOCKER_CONTENT_TRUST=1',note='Enable the docker trust env variable')
+		shutit.send('export DOCKER_CONTENT_TRUST_SERVER=https://notaryserver:4443',note='Telling Docker which server we are trusting (normally defaults to the Docker Hub)')
+		shutit.multisend('docker push sandboxregistry:5000/test/alpine:latest',{'passphrase for new offline key':'D0ck3rSh0ck3rOFFLINE','passphrase for new tagging key':'D0ck3rSh0ck3rTAGGING'},note='Pushing the image to the local registry, storing output for later use')
+		shutit.send('docker pull sandboxregistry:5000/test/alpine:latest',note='Pulling the image with new metadata from the local registry')
+		shutit.logout(note='Logging out of notary sandbox')
+		shutit.login(command='docker exec -it sandboxregistry bash',note='Logging into sandboxregistry to poison the image!')
+		shutit.send('echo "Evil data" > /var/lib/registry/docker/registry/v2/blobs/sha256/$(ls /var/lib/registry/docker/registry/v2/blobs/sha256/ | head -1)/*/data',note='Placing bad data into the registry!')
+		shutit.logout(note='Logging out of sandbox registry')
+		shutit.send('docker rmi sandboxregistry:5000/test/alpine:latest',note='Removing the image we have locally')
+		shutit.send('docker pull sandboxregistry:5000/test/alpine:latest',note='Pulling the image again, it will fail to verify!')
 		shutit.logout()
 		shutit.logout()
 		return True
