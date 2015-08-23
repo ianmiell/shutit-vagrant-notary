@@ -3,7 +3,6 @@
 
 from shutit_module import ShutItModule
 
-
 class vagrant_notary(ShutItModule):
 
 
@@ -67,11 +66,12 @@ class vagrant_notary(ShutItModule):
 		# shutit.set_password(password, user='')
 		#                                    - Set password for a given user on target
 		shutit.install('git')
+		shutit.send('mkdir -p ' + shutit.cfg[self.module_id]['vagrant_dir'])
 		shutit.send('cd ' + shutit.cfg[self.module_id]['vagrant_dir'])
 		if shutit.file_exists('shutit-vagrant-notary',directory=True):
 			shutit.send('cd shutit-vagrant-notary')
 		else:
-			shutit.send('git clone https://github.com/ianmiell/shutit-vagrant-notary')
+			shutit.send('git clone --recursive https://github.com/ianmiell/shutit-vagrant-notary')
 			shutit.send('cd shutit-vagrant-notary')
 		shutit.send('vagrant up')
 		shutit.login(command='vagrant ssh')
@@ -118,7 +118,8 @@ ENTRYPOINT ["bash"]''',note='Create dockerfile for sandbox build')
 		# shutit.get_config(self.module_id, 'myconfig', default='a value')
 		#                                      and reference in your code with:
 		# shutit.cfg[self.module_id]['myconfig']
-		shutit.get_config(self.module_id, 'vagrant_dir', '/space/vagrant', hint='Location of build')
+		import os
+		shutit.get_config(self.module_id, 'vagrant_dir', os.path.expanduser('~'), hint='Location of build')
 		return True
 
 	def test(self, shutit):
