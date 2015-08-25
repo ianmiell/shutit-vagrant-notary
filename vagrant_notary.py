@@ -124,7 +124,7 @@ ENTRYPOINT ["bash"]''',note='Creating dockerfile for sandbox build')
 		shutit.send('D0ck3rSh0ck3rTAGGING')
 		shutit.send('docker pull sandboxregistry:5000/test/alpine:latest',note='Pulling the image with new metadata from the local registry')
 		shutit.logout()
-		shutit.login(command='docker exec -it sandboxregistry bash',note='Logging into sandboxregistry to poison the image!')
+		shutit.login(command='docker exec -it sandboxregistry bash')
 		# Can't get output ok into sha256, so let's just poison them all!
 		shutit.send('for f in $(ls /var/lib/registry/docker/registry/v2/blobs/sha256); do echo "Evil data" > /var/lib/registry/docker/registry/v2/blobs/sha256/$f/data; done',note='Placing bad data into the registry!')
 		shutit.logout()
