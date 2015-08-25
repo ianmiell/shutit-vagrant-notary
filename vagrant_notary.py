@@ -69,7 +69,7 @@ class vagrant_notary(ShutItModule):
 		shutit.send('cd ' + shutit.cfg[self.module_id]['vagrant_dir'])
 		if shutit.file_exists('shutit-vagrant-notary',directory=True):
 			shutit.send('cd shutit-vagrant-notary')
-			shutit.send('git pull --recursive')
+			shutit.send('git pull')
 		else:
 			shutit.send('git clone --recursive https://github.com/ianmiell/shutit-vagrant-notary')
 			shutit.send('cd shutit-vagrant-notary')
@@ -127,7 +127,7 @@ ENTRYPOINT ["bash"]''',note='Creating dockerfile for sandbox build')
 		shutit.login(command='docker exec -it sandboxregistry bash',note='Logging into sandboxregistry to poison the image!')
 		# Can't get output ok into sha256, so let's just poison them all!
 		shutit.send('for f in $(ls /var/lib/registry/docker/registry/v2/blobs/sha256); do echo "Evil data" > /var/lib/registry/docker/registry/v2/blobs/sha256/$f/data; done',note='Placing bad data into the registry!')
-		shutit.logout(note='Logging out of sandbox registry')
+		shutit.logout()
 		shutit.send('docker rmi -f sandboxregistry:5000/test/alpine:latest',note='Removing the image we have locally, just rmi does not work')
 		shutit.login('docker exec -ti notarysandbox bash')
 		shutit.send('export DOCKER_CONTENT_TRUST=1',note='Enable the docker trust env variable')
