@@ -69,6 +69,7 @@ class vagrant_notary(ShutItModule):
 		shutit.send('cd ' + shutit.cfg[self.module_id]['vagrant_dir'])
 		if shutit.file_exists('shutit-vagrant-notary',directory=True):
 			shutit.send('cd shutit-vagrant-notary')
+			shutit.send('git pull --recursive')
 		else:
 			shutit.send('git clone --recursive https://github.com/ianmiell/shutit-vagrant-notary')
 			shutit.send('cd shutit-vagrant-notary')
